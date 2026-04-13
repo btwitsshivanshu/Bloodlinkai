@@ -1,0 +1,167 @@
+================================================================
+  AI BLOOD DONATION PLATFORM — PROJECT FLOW & INTERVIEW PREP
+================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  HOW TO UNDERSTAND THIS PROJECT (STEP-BY-STEP READING ORDER)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — Understand the Data Models (server/src/models/)
+  Start here. Everything revolves around these 6 schemas:
+  • User.js          — name, email, password, role (donor/receiver/admin)
+  • DonorProfile.js  — bloodGroup, location (GeoJSON), available,
+                       totalDonations, donationHistory, healthScore
+  • BloodRequest.js  — bloodGroup, units, urgency, status, hospital,
+                       receiverId, matchedDonorId
+  • ChatMessage.js   — conversationId, senderId, content
+  • Conversation.js  — participants[], lastMessage, unreadCount
+  • Notification.js  — userId, type, message, read
+
+STEP 2 — Understand Auth Flow (server/src/controllers/auth.controller.js)
+  • User registers → role assigned (donor/receiver)
+  • Password hashed with bcrypt, JWT issued on login
+  • JWT stored in localStorage on client
+  • Every protected API call attaches  Authorization: Bearer <token>
+  • server/src/middleware/auth.js verifies token and sets req.userId
+
+STEP 3 — Understand the API Layer (server/src/routes/ + controllers/)
+  Read in this order:
+  auth.routes.js     → register, login
+  user.routes.js     → get/update profile, change password
+  donor.routes.js    → create profile, update, toggle availability,
+                       get compatible donors (core matching endpoint)
+  request.routes.js  → CRUD for blood requests, update status (fulfill)
+  chat.routes.js     → conversations, send/fetch messages
+  notification.routes.js → list + mark-read
+  admin.routes.js    → stats, user management, all requests
+
+STEP 4 — Understand the AI Utilities (client/src/utils/ai.ts)
+  Four functions, all rule-based (no external ML):
+  • classifyUrgency()  — keyword scan → critical/moderate/normal
+  • rankDonors()       — weighted score: distance+recency+availability+compatibility
+  • detectFakeRequest() — heuristic risk score, blocks if >= 60
+  • predictDemand()    — historical request count → trend + forecast
+
+STEP 5 — Understand Client State (client/src/context/AppContext.tsx)
+  Central store for the entire frontend:
+  • user, donors, requests, conversations, messages, notifications
+  • Functions: login, logout, addRequest, completeDonation,
+               sendMessage, startConversation, refreshDonors, etc.
+  • On login → fetches all data and hydrates state
+  • Uses localStorage for token + user persistence across refreshes
+
+STEP 6 — Understand Routing (client/src/App.tsx)
+  • effectiveView = activeView || user.role
+  • Donor sees: DonorDashboard (dashboard, requests, history)
+  • Receiver sees: ReceiverDashboard (new-request, my-requests, find-donors)
+  • Admin sees: AdminDashboard (overview, donors-list, requests, ai-insights)
+  • Shared pages: Chat, NearbyDonors (map), Chatbot, EditProfile
+  • Admin can switch into donor/receiver view via handleSwitchView()
+
+STEP 7 — Understand Real-Time (server/src/socket.js + client/src/context/SocketContext.tsx)
+  Socket.io handles:
+  • send-message / new-message  — live chat delivery
+  • typing / user-typing        — typing indicator
+  • stop-typing / user-stop-typing
+  • new-blood-request           — alerts all donors when request created
+  • donor-response              — notifies receiver when donor accepts
+  Users join their userId room + role:donor/receiver/admin room on connect
+
+STEP 8 — Understand the Full Donation Lifecycle
+  1. Receiver creates request → AI classifies urgency → saved to DB
+  2. Socket emits new-blood-request → all donors get alert
+  3. Donor sees request in their dashboard → accepts it
+  4. Request status: open → matched (matchedDonorId set)
+  5. Receiver clicks "Verify Donation" on AI-ranked donor list
+  6. PUT /api/requests/:id/status  { status: 'fulfilled' }
+  7. Server updates DonorProfile: totalDonations+1, lastDonationDate,
+     available=false, donationHistory pushed
+  8. Frontend optimistically updates UI, reverts on failure
+
+STEP 9 — Understand the Map Feature (client/src/pages/NearbyDonors.tsx)
+  • Uses React-Leaflet + OpenStreetMap tiles
+  • Geocodes donor addresses via Nominatim (client/src/utils/geocode.ts)
+  • Displays donor pins on map with popup cards
+  • Filters by blood group and availability
+
+STEP 10 — Read the Admin Dashboard last (client/src/pages/AdminDashboard.tsx)
+  • Fetches /api/admin/stats for real counts (totalDonors, activeRequests, etc.)
+  • Falls back to client-side computed values if API fails
+  • Charts: Recharts BarChart (blood group distribution),
+            PieChart (urgency + status), AreaChart (monthly trend)
+  • AI Insights tab: demand predictions per blood group
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  10 INTERVIEW QUESTIONS (WITH ANSWER HINTS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q1. How does the donor-matching algorithm work?
+    → rankDonors() scores donors on 4 weighted factors:
+      distance (35%), donation recency (25%), availability (20%),
+      blood compatibility (20%). Returns sorted list.
+      Blood group compatibility is checked from a compatibility
+      map (e.g. O- is universal donor, AB+ accepts all).
+
+Q2. How is JWT authentication implemented end-to-end?
+    → On login, server signs a JWT with userId + role using JWT_SECRET.
+      Client stores it in localStorage. Every API call sends it in
+      Authorization header. auth.js middleware verifies it and attaches
+      req.userId. Socket.io also verifies it in its handshake middleware.
+
+Q3. How does real-time chat work?
+    → Socket.io rooms per conversation (conversation:<id>).
+      Client joins room on open, emits send-message, server broadcasts
+      new-message to other participants. Typing indicators use
+      typing/stop-typing events. Messages are also persisted to MongoDB
+      via the REST API so history survives reconnects.
+
+Q4. How does the system prevent fake/spam blood requests?
+    → detectFakeRequest() computes a risk score from heuristics:
+      too many units, very short description, no hospital, invalid coords,
+      repeated same blood group. If score >= 60 the submit is blocked
+      client-side with an alert showing the risk reasons.
+
+Q5. How does the donation lifecycle update donor statistics?
+    → When a request status is set to 'fulfilled', the server's
+      updateStatus controller runs findOneAndUpdate on DonorProfile
+      with $inc totalDonations, $set lastDonationDate + available=false,
+      and $push to donationHistory — all in one atomic operation.
+
+Q6. What is the role of GeoJSON in this project?
+    → Donor locations are stored as GeoJSON Point { type, coordinates:[lng,lat] }
+      in MongoDB. This enables future $near / $geoWithin geo-queries.
+      The map feature uses React-Leaflet and geocodes text addresses
+      via Nominatim to get coordinates for pin placement.
+
+Q7. How does the multi-role view switching work?
+    → effectiveView = activeView || user.role. Admin can call
+      handleSwitchView('donor') to browse as a donor without changing
+      their actual role in the DB. The routing and UI both key off
+      effectiveView, not user.role, ensuring consistent behavior.
+
+Q8. How is the urgency auto-classified in blood requests?
+    → classifyUrgency() scans the description for critical keywords
+      (emergency, trauma, hemorrhage...) and moderate keywords
+      (surgery, scheduled...). It also boosts urgency for high unit
+      counts (>4) and rare blood groups. Returns level + confidence%.
+
+Q9. How is state managed across the app without Redux?
+    → A single React Context (AppContext) wraps the entire app.
+      It holds all entities (user, donors, requests, conversations,
+      messages, notifications) and all mutating functions. Components
+      call useApp() to read or update state. No prop drilling needed.
+
+Q10. What would you improve if you had more time?
+     → Suggested answers:
+       • Geocode hospital address before submit so donor matching
+         uses real coordinates instead of lat:0/lng:0
+       • Replace keyword-based urgency with a small NLP classifier
+       • Add markAsRead API call so unread badge counts reset properly
+       • Add pagination in admin dashboard (backend supports it,
+         frontend doesn't use it yet)
+       • Set matchedDonorId when a donor accepts, so donation
+         verification always correctly credits the right donor
+
+================================================================

@@ -1,0 +1,7 @@
+Urgency Classification — Keyword-matching on the request description auto-labels requests as critical, moderate, or normal with a live preview as you type.
+
+Donor Ranking & Matching — Scores compatible donors using weighted factors (distance 35%, donation recency 25%, availability 20%, blood compatibility 20%) to surface the best matches.
+
+Fraud Detection — Scores each new request for suspicious signals (excessive units, short description, repeated requests) and blocks it if the risk score hits 60+.
+
+Demand Prediction — Analyzes historical requests per blood group to compute current demand, predict future need, and show a rising/falling trend in the Admin dashboard.

@@ -1,0 +1,18 @@
+{
+  "name": "bloodlink-ai",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AI-Powered Blood Donation Platform — Monorepo",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev:client",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client",
+    "seed": "npm run seed --workspace=server",
+    "start:server": "npm start --workspace=server"
+  }
+}
