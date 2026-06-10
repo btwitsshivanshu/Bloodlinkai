@@ -3,6 +3,9 @@
 // ============================================================
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { BASE } from '../utils/api';
+
+const SOCKET_URL = BASE.replace('/api', '');
 
 interface SocketContextValue {
   socket: Socket | null;
@@ -30,7 +33,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     // Already connected with same token
     if (socketRef.current?.connected) return;
 
-    const s = io('http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com', {
+    const s = io('SOCKET_URL', {
       auth: { token },
       transports: ['websocket', 'polling'],
     });
@@ -56,7 +59,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socketRef.current = null;
     }
     if (!token) { setConnected(false); return; }
-    const s = io('http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com', {
+    const s = io('SOCKET_URL', {
       auth: { token },
       transports: ['websocket', 'polling'],
     });

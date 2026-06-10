@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { BASE } from '../utils/api';
 import { useApp } from '../context/AppContext';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -92,7 +93,7 @@ export default function NearbyDonors({ onNavigate }: { onNavigate?: (page: strin
     setFetchingDonors(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com/api/donors/compatible', {
+      const res = await fetch(`${BASE}/donors/compatible`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

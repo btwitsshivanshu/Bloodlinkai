@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { UserRole } from '../types';
 import { useApp } from '../context/AppContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { BASE } from '../utils/api';
 
 const TYPEWRITER_WORDS = ['Save Lives.', 'Find Donors.', 'Give Hope.', 'Act Now.'];
 const TYPE_SPEED = 100;
@@ -64,7 +65,7 @@ export default function Landing() {
     setError('');
     setLoading(true);
     try {
-      const endpoint = isLoginView ? 'http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com/api/auth/login' : 'http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com/api/auth/register';
+      const endpoint = isLoginView ? `${BASE}/auth/login` : `${BASE}/auth/register`;
       const bodyPayload = isLoginView 
         ? { email, password } 
         : { name: fullName, email, password, role: selectedRole };
@@ -110,7 +111,7 @@ export default function Landing() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setError('');
     try {
-      const res = await fetch('http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com/api/auth/google', {
+      const res = await fetch(`${BASE}/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
