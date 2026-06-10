@@ -2,7 +2,7 @@
 // API Helper — Centralized fetch wrapper with auth
 // ============================================================
 
-export const BASE = 'http://bloodlink-alb-1885440142.eu-north-1.elb.amazonaws.com/api';
+export const BASE = 'https://bloodlinkai-backend.onrender.com/api';
 
 function getToken(): string | null {
   return localStorage.getItem('token');
